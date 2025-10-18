@@ -3,6 +3,7 @@ import { fetchDataByMobile, fetchKgDataByMobile } from "../services/studentServi
 import { School } from "../models/schoolModel.js";
 import { StudyMaterial } from "../services/studyMaterialService.js";
 import { TeacherIncharge } from "../models/TeacherInchanrgeModel.js";
+import { excelToMongoDbForStudent } from "../utils/excelToMongoForStudent.js";
 
 const studentCache = {};
 const examNameMapping = {
@@ -242,4 +243,21 @@ export const getAttendanceStudents = async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: 'Server error', error: err.message });
     }
+};
+
+
+export const uploadStudentData = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "Please upload an XLSX file" });
+  }
+
+  try {
+    const response = await excelToMongoDbForStudent(req.file.path);
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error uploading student data:", error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    await fs.unlink(req.file.path).catch((err) => console.error("Error deleting file:", err));
+  }
 };

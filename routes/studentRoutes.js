@@ -7,7 +7,8 @@ import {
   getStudentsWithoutPagination,
   getDashboardAnalytics,
   updateStudent,
-  addStudent
+  addStudent,
+  uploadStudentData
 } from "../controllers/studentController.js";
 import { storeFeedBack } from "../controllers/feedbackController.js";
 import { getFeedback } from "../controllers/feedbackController.js";
@@ -17,7 +18,7 @@ const router = express.Router();
 router.get("/get-student", getStudentByMobile);
 router.get("/all-students", getAllStudents);
 router.post("/allStudents", getAttendanceStudents)
-
+router.post("/upload-studentdata", uploadStudentData);
 // also using for fetching participation 
 router.post("/students", getStudents);
 
