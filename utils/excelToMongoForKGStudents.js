@@ -87,7 +87,14 @@ export async function excelToMongoDbForKindergarten(filePath) {
         });
 
         // Validate and transform student data
-        const validSections = ["LKG", "UKG", "PG"];
+        const validSections = ["LKG", "UKG", "PG", "LK", "UK"];
+        const sectionMapping = {
+            "LKG": "LK",
+            "UKG": "UK", 
+            "PG": "PG",
+            "LK": "LK",
+            "UK": "UK"
+        };
         const invalidRecords = [];
         const processedStudents = students.map((student, index) => {
             const rowNum = index + 2;
@@ -115,11 +122,12 @@ export async function excelToMongoDbForKindergarten(filePath) {
             }
 
             if (!student.section || !validSections.includes(student.section)) {
-                errors.push(`Row ${rowNum}: section must be LK, UKG, or PG`);
+                errors.push(`Row ${rowNum}: section must be LKG, UKG, PG, LK, or UK`);
             }
 
-            if (student.class && student.class !== "KD") {
-                errors.push(`Row ${rowNum}: class must be KD`);
+            // Class validation - allow KD, KG, or auto-set to KD
+            if (student.class && !["KD", "KG"].includes(student.class)) {
+                errors.push(`Row ${rowNum}: class must be KD or KG`);
             }
 
             if (errors.length > 0) {
@@ -130,11 +138,11 @@ export async function excelToMongoDbForKindergarten(filePath) {
                 });
             }
 
-            return {
+            const processedStudent = {
                 rollNo: student.rollNo?.trim() || "",
                 schoolCode,
                 class: "KD",
-                section: student.section?.trim() || "",
+                section: sectionMapping[student.section?.trim()] || student.section?.trim() || "",
                 studentName: student.studentName?.trim() || "",
                 fatherName: student.fatherName?.trim() || "",
                 motherName: student.motherName?.trim() || "",
@@ -154,15 +162,40 @@ export async function excelToMongoDbForKindergarten(filePath) {
                 totalAmountPaid: student.totalAmountPaid?.trim() || "",
                 totalAmountPaidOnline: student.totalAmountPaidOnline?.trim() || "",
             };
+            
+            console.log(`Processed student ${index + 2}:`, {
+                rollNo: processedStudent.rollNo,
+                schoolCode: processedStudent.schoolCode,
+                studentName: processedStudent.studentName,
+                section: processedStudent.section,
+                errors: errors
+            });
+            
+            return processedStudent;
         });
 
-        const validStudents = processedStudents.filter((student) => {
-            return (
+        const validStudents = processedStudents.filter((student, index) => {
+            const isValid = (
                 student.rollNo &&
                 student.schoolCode !== null &&
                 student.studentName &&
                 student.section
             );
+            
+            if (!isValid) {
+                console.log(`Student ${index + 1} validation failed:`, {
+                    rollNo: student.rollNo,
+                    schoolCode: student.schoolCode,
+                    studentName: student.studentName,
+                    section: student.section,
+                    hasRollNo: !!student.rollNo,
+                    hasSchoolCode: student.schoolCode !== null,
+                    hasStudentName: !!student.studentName,
+                    hasSection: !!student.section
+                });
+            }
+            
+            return isValid;
         });
 
         if (invalidRecords.length > 0) {
@@ -204,6 +237,7 @@ export async function excelToMongoDbForKindergarten(filePath) {
                 { ordered: false }
             );
             insertedCount = insertedStudents.length;
+            console.log(insertedStudents,"insertedStudents=>");
             console.log(
                 `Successfully inserted ${insertedCount} kindergarten students into MongoDB`
             );
@@ -211,7 +245,14 @@ export async function excelToMongoDbForKindergarten(filePath) {
             console.log("No valid kindergarten student records to insert");
         }
 
-        await fsPromises.unlink(filePath);
+        // Delete the file safely
+        try {
+            await fsPromises.access(filePath);
+            await fsPromises.unlink(filePath);
+            console.log(`Successfully deleted file: ${filePath}`);
+        } catch (unlinkError) {
+            console.warn(`File ${filePath} may have already been deleted or doesn't exist:`, unlinkError.message);
+        }
 
         return {
             success: true,
@@ -220,10 +261,13 @@ export async function excelToMongoDbForKindergarten(filePath) {
             invalidRecords: invalidRecords.length > 0 ? invalidRecords : undefined,
         };
     } catch (error) {
+        // Delete the file safely in error case
         try {
+            await fsPromises.access(filePath);
             await fsPromises.unlink(filePath);
+            console.log(`Successfully deleted file after error: ${filePath}`);
         } catch (unlinkError) {
-            console.error("Error deleting file:", unlinkError);
+            console.warn(`File ${filePath} may have already been deleted or doesn't exist:`, unlinkError.message);
         }
         console.error("Error processing kindergarten student CSV file:", error);
         throw new Error("Invalid data in CSV file", { cause: { invalidRecords } });

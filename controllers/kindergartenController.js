@@ -145,6 +145,14 @@ export const uploadKindergartenStudentsCSV = async (req, res) => {
       errors: error.errors || [],
     });
   } finally {
-    await fs.unlink(req.file.path).catch(err => console.error("Error deleting file:", err));
+    // Safe file deletion - the excelToMongoDbForKindergarten function handles file deletion
+    // so we only need this as a backup
+    try {
+      await fs.access(req.file.path);
+      await fs.unlink(req.file.path);
+      console.log(`Backup file deletion successful: ${req.file.path}`);
+    } catch (err) {
+      console.warn(`File ${req.file.path} may have already been deleted:`, err.message);
+    }
   }
 };
