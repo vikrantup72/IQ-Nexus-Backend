@@ -87,7 +87,7 @@ export async function excelToMongoDbForKindergarten(filePath) {
         });
 
         // Validate and transform student data
-        const validSections = ["LK", "UK", "PG"];
+        const validSections = ["LK", "UKG", "PG"];
         const invalidRecords = [];
         const processedStudents = students.map((student, index) => {
             const rowNum = index + 2;
@@ -115,7 +115,7 @@ export async function excelToMongoDbForKindergarten(filePath) {
             }
 
             if (!student.section || !validSections.includes(student.section)) {
-                errors.push(`Row ${rowNum}: section must be LK, UK, or PG`);
+                errors.push(`Row ${rowNum}: section must be LK, UKG, or PG`);
             }
 
             if (student.class && student.class !== "KD") {
