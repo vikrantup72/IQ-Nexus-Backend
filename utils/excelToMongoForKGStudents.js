@@ -87,7 +87,7 @@ export async function excelToMongoDbForKindergarten(filePath) {
         });
 
         // Validate and transform student data
-        const validSections = ["LK", "UKG", "PG"];
+        const validSections = ["LKG", "UKG", "PG"];
         const invalidRecords = [];
         const processedStudents = students.map((student, index) => {
             const rowNum = index + 2;
